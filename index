@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yunlong's Space | 探索 GIS 与代码的边界</title>
+    <!-- 引入字体图标 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- 引入 Marked 解析 Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* --- 1. 全局变量与重置 --- */
+        :root {
+            --bg-gradient: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-main: #ffffff;
+            --text-sub: rgba(255, 255, 255, 0.8);
+            --accent: #00d2ff;
+            --card-hover: rgba(255, 255, 255, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            color: var(--text-main);
+            background: #0f0c29; /* 备用背景色 */
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* --- 2. 动态流光背景 --- */
+        .animated-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-gradient);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            z-index: -2;
+        }
+        
+        /* 叠加一层深色遮罩，保证文字可读性 */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6); /* 深蓝半透明遮罩 */
+            backdrop-filter: blur(10px); /* 全局模糊 */
+            z-index: -1;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* --- 3. 布局与导航 --- */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 30px 0;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            background: linear-gradient(to right, #fff, #00d2ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links span {
+            margin-left: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+        }
+        
+        .nav-links span::after {
+            content: '';
+            position: absolute;
+            width: 0; height: 2px;
+            bottom: -5px; left: 0;
+            background-color: var(--accent);
+            transition: width 0.3s;
+        }
+        .nav-links span:hover::after { width: 100%; }
+        .nav-links span:hover { color: var(--accent); }
+
+        /* --- 4. 毛玻璃卡片样式 --- */
+        .glass-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 30px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s, background 0.3s;
+            margin-bottom: 25px;
+        }
+
+        .glass-card.hoverable:hover {
+            transform: translateY(-5px);
+            background: var(--card-hover);
+            border-color: rgba(255,255,255,0.4);
+            cursor: pointer;
+        }
+
+        /* --- 5. 首页内容 --- */
+        .hero-section {
+            text-align: center;
+            padding: 60px 0;
+        }
+        
+        .avatar {
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            border: 4px solid rgba(255,255,255,0.2);
+            margin-bottom: 20px;
+            object-fit: cover;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
+        }
+
+        .typewriter {
+            font-size: 20px;
+            color: var(--accent);
+            min-height: 30px;
+            font-family: monospace;
+            margin-bottom: 40px;
+        }
+
+        /* 文章列表布局 */
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .post-date { font-size: 12px; opacity: 0.6; margin-bottom: 8px; display: block; }
+        .post-title { font-size: 20px; margin-bottom: 10px; font-weight: 700; line-height: 1.4; }
+        .post-tags span {
+            font-size: 10px;
+            background: rgba(0, 210, 255, 0.2);
+            padding: 3px 8px;
+            border-radius: 20px;
+            margin-right: 5px;
+            color: #00d2ff;
+        }
+
+        /* --- 6. 文章详情页 --- */
+        .article-view {
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .article-header { margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; }
+        .article-content { line-height: 1.8; font-size: 16px; color: rgba(255,255,255,0.9); }
+        
+        /* Markdown 样式适配 */
+        .article-content h1, .article-content h2 { margin-top: 30px; margin-bottom: 15px; color: #fff; }
+        .article-content p { margin-bottom: 15px; }
+        .article-content pre {
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .article-content code {
+            font-family: 'Consolas', monospace;
+            color: #ff79c6;
+        }
+        .article-content blockquote {
+            border-left: 4px solid var(--accent);
+            padding-left: 15px;
+            background: rgba(255,255,255,0.05);
+            padding: 10px 15px;
+            border-radius: 0 8px 8px 0;
+        }
+        .article-content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            cursor: pointer;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            transition: all 0.3s;
+        }
+        .back-btn:hover { background: var(--accent); color: #000; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .posts-grid { grid-template-columns: 1fr; }
+            header { flex-direction: column; gap: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 背景特效 -->
+    <div class="animated-bg"></div>
+    <div class="overlay"></div>
+
+    <div class="container">
+        <header>
+            <div class="logo" onclick="router.navigate('')">YUNLONG.LIU</div>
+            <nav class="nav-links">
+                <span onclick="router.navigate('')"><i class="fas fa-home"></i> 首页</span>
+                <span onclick="router.navigate('about')"><i class="fas fa-user-astronaut"></i> 关于我</span>
+                <span onclick="window.open('https://github.com')"><i class="fab fa-github"></i> Github</span>
+            </nav>
+        </header>
+
+        <main id="app-root">
+            <!-- 动态内容渲染区域 -->
+        </main>
+
+        <footer style="text-align: center; margin-top: 60px; padding: 20px; font-size: 12px; color: var(--text-sub);">
+            <p>&copy; 2025 Yunlong Liu. Built with Vanilla JS & Glassmorphism.</p>
+        </footer>
+    </div>
+
+    <script>
+        // --- 1. 配置中心 (你需要经常修改这里) ---
+        const CONFIG = {
+            name: "Yunlong Liu",
+            bio: ["GIS 开发者", "数据可视化爱好者", "Python & JavaScript", "永远保持好奇心"],
+            avatar: "https://api.dicebear.com/7.x/adventurer/svg?seed=Yunlong", // 你的头像地址
+            
+            // 博客文章数据
+            posts: [
+                {
+                    id: 1,
+                    title: "使用 Python 进行地理空间数据分析",
+                    date: "2025-05-21",
+                    tags: ["Python", "GIS", "Pandas"],
+                    excerpt: "Pandas 和 Geopandas 是处理空间数据的利器，本文介绍如何快速读取 Shapefile 并绘图...",
+                    // 这里写 Markdown 内容
+                    content: `
+# Geopandas 入门
+
+在 GIS 开发中，我们经常需要处理矢量数据。
+
+## 安装
+\`\`\`bash
+pip install geopandas
+\`\`\`
+
+## 读取数据
+使用 \`read_file\` 函数可以轻松读取 shapefile 或 geojson。
+
+> "数据是新时代的石油。"
+                    `
+                },
+                {
+                    id: 2,
+                    title: "打造极致体验的 Web 界面",
+                    date: "2025-05-18",
+                    tags: ["Web", "CSS", "UI/UX"],
+                    excerpt: "如何使用 Backdrop-filter 实现毛玻璃效果？CSS 变量如何管理主题？",
+                    content: `
+# Glassmorphism 指南
+
+毛玻璃效果（Glassmorphism）是近年来最流行的 UI 趋势之一。
+
+关键 CSS 属性：
+\`\`\`css
+.glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+\`\`\`
+                    `
+                },
+                {
+                    id: 3,
+                    title: "Google Earth Engine 实战笔记",
+                    date: "2025-05-10",
+                    tags: ["GEE", "Remote Sensing"],
+                    excerpt: "记录一次使用 GEE 进行长时序 NDVI 分析的过程，包含去云处理...",
+                    content: `
+# GEE 去云算法
+
+遥感影像最头疼的就是云层遮挡。
+
+1. 选择数据集 (Sentinel-2)
+2. 使用 QA 波段筛选
+3. 中值合成
+                    `
+                }
+            ],
+            
+            // 关于页面内容 (Markdown)
+            aboutContent: `
+# 关于我
+
+你好，我是 **Yunlong**。
+
+目前专注于 **GIS (地理信息系统)** 开发与数据可视化。我喜欢将复杂的空间数据通过代码转化为直观的地图和图表。
+
+### 技术栈
+*   **语言**: Python, JavaScript, R
+*   **Web**: Vue.js, Mapbox GL, Leaflet
+*   **GIS**: ArcGIS Pro, QGIS, GEE
+
+欢迎通过邮件联系我：\`1287397306a@gmail.com\`
+            `
+        };
+
+        // --- 2. 核心逻辑 (无需修改) ---
+        const router = {
+            init: function() {
+                window.addEventListener('hashchange', this.handleRoute.bind(this));
+                this.handleRoute(); // 首次加载
+            },
+            navigate: function(path) {
+                window.location.hash = path;
+            },
+            handleRoute: function() {
+                const hash = window.location.hash.slice(1) || '';
+                const app = document.getElementById('app-root');
+
+                if (hash === '') {
+                    this.renderHome(app);
+                } else if (hash === 'about') {
+                    this.renderAbout(app);
+                } else if (hash.startsWith('article/')) {
+                    const id = parseInt(hash.split('/')[1]);
+                    this.renderArticle(app, id);
+                }
+            },
+            
+            // 渲染首页
+            renderHome: function(container) {
+                // 个人简介区
+                let html = `
+                    <section class="hero-section glass-card">
+                        <img src="${CONFIG.avatar}" class="avatar">
+                        <h2 style="margin-bottom:10px">Hi, I'm ${CONFIG.name} 👋</h2>
+                        <div class="typewriter" id="typewriter"></div>
+                    </section>
+                    <h3 style="margin-bottom:20px; padding-left:10px; border-left:4px solid var(--accent)">最新文章</h3>
+                    <div class="posts-grid">
+                `;
+
+                // 文章卡片区
+                CONFIG.posts.forEach(post => {
+                    html += `
+                        <article class="glass-card hoverable" onclick="router.navigate('article/${post.id}')">
+                            <span class="post-date">${post.date}</span>
+                            <h3 class="post-title">${post.title}</h3>
+                            <p style="font-size:14px; opacity:0.7; margin-bottom:15px">${post.excerpt}</p>
+                            <div class="post-tags">
+                                ${post.tags.map(tag => `<span>#${tag}</span>`).join('')}
+                            </div>
+                        </article>
+                    `;
+                });
+                html += `</div>`;
+                container.innerHTML = html;
+                
+                // 触发打字机动画
+                this.startTypewriter(CONFIG.bio);
+            },
+
+            // 渲染文章详情
+            renderArticle: function(container, id) {
+                const post = CONFIG.posts.find(p => p.id === id);
+                if(!post) return container.innerHTML = '<div class="glass-card">文章未找到</div>';
+
+                const htmlContent = marked.parse(post.content);
+                
+                container.innerHTML = `
+                    <div class="article-view">
+                        <div class="back-btn" onclick="router.navigate('')"><i class="fas fa-arrow-left"></i> 返回首页</div>
+                        <div class="glass-card">
+                            <div class="article-header">
+                                <h1 style="font-size:28px; color:var(--accent)">${post.title}</h1>
+                                <div style="margin-top:10px; font-size:13px; opacity:0.6">
+                                    <i class="far fa-calendar-alt"></i> ${post.date} &nbsp;&nbsp;
+                                    <i class="fas fa-tag"></i> ${post.tags.join(', ')}
+                                </div>
+                            </div>
+                            <div class="article-content">
+                                ${htmlContent}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                window.scrollTo(0,0);
+            },
+
+            // 渲染关于页
+            renderAbout: function(container) {
+                const htmlContent = marked.parse(CONFIG.aboutContent);
+                container.innerHTML = `
+                    <div class="article-view">
+                        <div class="back-btn" onclick="router.navigate('')"><i class="fas fa-arrow-left"></i> 返回</div>
+                        <div class="glass-card article-content">
+                            ${htmlContent}
+                        </div>
+                    </div>
+                `;
+            },
+
+            // 打字机特效逻辑
+            startTypewriter: function(texts) {
+                const el = document.getElementById('typewriter');
+                if(!el) return;
+                let textIndex = 0;
+                let charIndex = 0;
+                let isDeleting = false;
+                
+                const type = () => {
+                    const currentText = texts[textIndex];
+                    if(isDeleting) {
+                        el.textContent = currentText.substring(0, charIndex - 1);
+                        charIndex--;
+                    } else {
+                        el.textContent = currentText.substring(0, charIndex + 1);
+                        charIndex++;
+                    }
+
+                    if(!isDeleting && charIndex === currentText.length) {
+                        isDeleting = true;
+                        setTimeout(type, 1500); // 停顿
+                    } else if(isDeleting && charIndex === 0) {
+                        isDeleting = false;
+                        textIndex = (textIndex + 1) % texts.length;
+                        setTimeout(type, 500);
+                    } else {
+                        setTimeout(type, isDeleting ? 50 : 100);
+                    }
+                };
+                type();
+            }
+        };
+
+        // 启动
+        router.init();
+    </script>
+</body>
+</html>
